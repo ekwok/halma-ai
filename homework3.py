@@ -8,7 +8,7 @@ class Node:
         self.parent = parent  # Parent node
 
 
-def getPositions(piece, board):
+def get_positions(piece, board):
     res = []
     for i in range(16):
         for j in range(16):
@@ -17,7 +17,7 @@ def getPositions(piece, board):
     return res
 
 
-def evalFunc(piece, positions):
+def eval_func(piece, positions):
     if piece == 'W':
         corner = 0, 0
     else:
@@ -30,12 +30,34 @@ def evalFunc(piece, positions):
     return res  # Negated sum of distances from all pieces to opponent's corner
 
 
+def is_in_board(pos):
+    if 0 <= pos[0] < 16 and 0 <= pos[1] < 16:
+        return True
+    return False
+
+
+def get_valid_moves(pos, board, visited, valid_moves):
+    moves = [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)]  # Eight possible moves
+    for m in moves:
+        new_pos = pos[0] + m[0], pos[1] + m[1]
+        if not is_in_board(new_pos):
+            return valid_moves
+        if board[new_pos[0]][new_pos[1]] != '.' and is_in_board((new_pos[0]+m[0], new_pos[1]+m[1])) and \
+                board[new_pos[0]+m[0]][new_pos[1]+m[1]] == '.':
+            new_pos = new_pos[0] + m[0], new_pos[1] + m[1]
+            valid_moves.append(('J', pos, new_pos))  # Make a jump
+        else:
+            valid_moves.append(('E', pos, new_pos))  # Move to adjacent empty location
+
+
 def single(color, time, board):
     piece = color[0]  # 'W' for WHITE and 'B' for BLACK
 
-    positions = getPositions(piece, board)
-    searchTree = Node(board, evalFunc(piece, positions), None)
-    print(searchTree.val)
+    positions = get_positions(piece, board)
+    best_val = float('-inf')
+
+    for pos in positions:
+        valid_moves = get_valid_moves(pos, board, [pos], [])
 
     return []
 
@@ -46,22 +68,22 @@ def game(color, time, board):
 
 def main():
     with open('input.txt') as infile:
-        TYPE = infile.readline().strip()
-        COLOR = infile.readline().strip()
-        TIME = float(infile.readline().strip())
-        BOARD = []
+        mode = infile.readline().strip()
+        color = infile.readline().strip()
+        time = float(infile.readline().strip())
+        board = []
         for i in range(16):
-            BOARD.append(list(infile.readline().strip()))
+            board.append(list(infile.readline().strip()))
 
-    if TYPE == 'SINGLE':
-        results = single(COLOR, TIME, BOARD)
+    if mode == 'SINGLE':
+        results = single(color, time, board)
     else:
-        results = game(COLOR, TIME, BOARD)
+        results = game(color, time, board)
 
-    # print('TYPE:', TYPE)
-    # print('COLOR:', COLOR)
-    # print('TIME:', TIME)
-    # for row in BOARD:
+    # print('mode:', mode)
+    # print('color:', color)
+    # print('time:', time)
+    # for row in board:
     #     print(row)
 
 
