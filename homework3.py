@@ -78,8 +78,42 @@ def get_move_seq(end_node):
     return move_seq
 
 
+def has_piece_in_own_camp(positions, camp):
+    for p in positions:
+        if p in camp:
+            return True
+    return False
+
+
+def is_first_possible(valid_moves, camp):
+    for move in valid_moves:
+        move_seq = get_move_seq(move)
+        if move_seq[0] in camp and move_seq[-1] not in camp:  # First possibility of Rule 1b
+            return True
+    return False
+
+
 def single(color, time, board):
     piece = color[0]  # 'W' for WHITE and 'B' for BLACK
+
+    if piece == 'W':
+        camp = [
+            (11, 14), (11, 15),
+            (12, 13), (12, 14), (12, 15),
+            (13, 12), (13, 13), (13, 14), (13, 15),
+            (14, 11), (14, 12), (14, 13), (14, 14), (14, 15),
+            (15, 11), (15, 12), (15, 13), (15, 14), (15, 15)
+        ]
+        camp_corner = 15, 15
+    else:
+        camp = [
+            (0, 0), (0, 1), (0, 2), (0, 3), (0, 4),
+            (1, 0), (1, 1), (1, 2), (1, 3), (1, 4),
+            (2, 0), (2, 1), (2, 2), (2, 3),
+            (3, 0), (3, 1), (3, 2),
+            (4, 0), (4, 1)
+        ]
+        camp_corner = 0, 0
 
     positions = get_positions(piece, board)
     best_val = float('-inf')
@@ -88,8 +122,14 @@ def single(color, time, board):
         valid_moves = get_valid_moves(pos, board)
         print('pos:', pos)
         print('valid_moves:')
+        first_possible = is_first_possible(valid_moves, camp)
         for move in valid_moves:
             move_seq = get_move_seq(move)
+            if move_seq[0] not in camp and move_seq[-1] in camp:  # Rule 1a of addendum
+                continue
+            if has_piece_in_own_camp(positions, camp):  # Rule 1b of addendum
+                if first_possible and (move_seq[0] not in camp or (move_seq[0] in camp and move_seq[-1] in camp)):
+                    continue
             print(move_seq)
         print()
 
@@ -101,7 +141,7 @@ def game(color, time, board):
 
 
 def main():
-    with open('input.txt') as infile:
+    with open('input3.txt') as infile:
         mode = infile.readline().strip()
         color = infile.readline().strip()
         time = float(infile.readline().strip())
