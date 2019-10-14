@@ -100,10 +100,10 @@ def move_out_of_camp(move_seq, camp):
     return False
 
 
-def move_away_from_camp(move_seq, camp_corner):
+def move_away_from_corner(move_seq, camp, camp_corner):
     start, end = move_seq[0], move_seq[-1]
-    if math.sqrt((end[0]-camp_corner[0])**2 + (end[1]-camp_corner[1])**2) > \
-            math.sqrt((start[0]-camp_corner[0])**2 + (start[1]-camp_corner[1])**2):  # Moved away from camp corner
+    if start in camp and math.sqrt((end[0]-camp_corner[0])**2 + (end[1]-camp_corner[1])**2) > \
+            math.sqrt((start[0]-camp_corner[0])**2 + (start[1]-camp_corner[1])**2):
         return True
     return False
 
@@ -131,28 +131,25 @@ def single(color, time, board):
         camp_corner = 0, 0
 
     positions = get_positions(piece, board)
-    best_val = float('-inf')
-
-    in_own_camp = has_piece_in_own_camp(positions, camp)
+    move_seqs = []  # List of possible move sequences
     for pos in positions:
-        print('pos:', pos)
-        print('valid_moves:')
         end_nodes = get_end_nodes(pos, board)  # List of end nodes for backtracking
-        move_seqs = get_move_seqs(end_nodes)  # List of move sequences
+        move_seqs.extend(get_move_seqs(end_nodes))
 
-        move_seqs = list(filter(lambda x: move_back_in_camp(x, camp), move_seqs))  # Rule 1a of addendum
-        if in_own_camp:  # Rule 1b of addendum
-            final_move_seqs = list(filter(lambda x: move_out_of_camp(x, camp), move_seqs))  # Alt. 1
-            if not final_move_seqs:  # Alt. 1 not possible
-                final_move_seqs = list(filter(lambda x: move_away_from_camp(x, camp_corner), move_seqs))  # Alt. 2
-                if not final_move_seqs:  # Alt. 2 not possible
-                    final_move_seqs = move_seqs
-        else:
-            final_move_seqs = move_seqs
+    move_seqs = list(filter(lambda x: move_back_in_camp(x, camp), move_seqs))  # Rule 1a of addendum
+    if has_piece_in_own_camp(positions, camp):  # Rule 1b of addendum
+        final_move_seqs = list(filter(lambda x: move_out_of_camp(x, camp), move_seqs))  # Alt. 1
+        if not final_move_seqs:  # Alt. 1 not possible
+            final_move_seqs = list(filter(lambda x: move_away_from_corner(x, camp, camp_corner), move_seqs))  # Alt. 2
+            if not final_move_seqs:  # Alt. 2 not possible
+                final_move_seqs = move_seqs
+    else:
+        final_move_seqs = move_seqs
 
-        for fms in final_move_seqs:
-            print(fms)
-        print()
+    best_val = float('-inf')
+    for fms in final_move_seqs:
+        print(fms)
+    print()
 
     return []
 
@@ -162,7 +159,7 @@ def game(color, time, board):
 
 
 def main():
-    with open('input3.txt') as infile:
+    with open('input4.txt') as infile:
         mode = infile.readline().strip()
         color = infile.readline().strip()
         time = float(infile.readline().strip())
