@@ -50,7 +50,7 @@ def add_jumps(start, board, visited, end_nodes):
             add_jumps(child, board, visited+[new_pos], end_nodes)
 
 
-def get_valid_moves(pos, board):
+def get_end_nodes(pos, board):
     directions = [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)]  # Eight possible directions
     root = MoveNode(None, pos, None)  # All possible moves organized in a tree
     end_nodes = []  # List of nodes containing ending coordinates of possible moves (used for backtracking)
@@ -69,13 +69,22 @@ def get_valid_moves(pos, board):
     return end_nodes
 
 
-def get_move_seq(end_node):
-    move_seq = [end_node.coord]
-    node = end_node
-    while node.parent:
-        move_seq = [node.parent.coord] + move_seq
-        node = node.parent
-    return move_seq
+def get_move_seqs(end_nodes):
+    res = []
+    for en in end_nodes:
+        move_seq = [en.coord]
+        node = en
+        while node.parent:
+            move_seq = [node.parent.coord] + move_seq
+            node = node.parent
+        res.append(move_seq)
+    return res
+
+
+def move_back_in_camp(move_seq, camp):
+    if move_seq[0] not in camp and move_seq[-1] in camp:
+        return False
+    return True
 
 
 def has_piece_in_own_camp(positions, camp):
@@ -85,11 +94,17 @@ def has_piece_in_own_camp(positions, camp):
     return False
 
 
-def is_first_possible(valid_moves, camp):
-    for move in valid_moves:
-        move_seq = get_move_seq(move)
-        if move_seq[0] in camp and move_seq[-1] not in camp:  # First possibility of Rule 1b
-            return True
+def move_out_of_camp(move_seq, camp):
+    if move_seq[0] in camp and move_seq[-1] not in camp:
+        return True
+    return False
+
+
+def move_away_from_camp(move_seq, camp_corner):
+    start, end = move_seq[0], move_seq[-1]
+    if math.sqrt((end[0]-camp_corner[0])**2 + (end[1]-camp_corner[1])**2) > \
+            math.sqrt((start[0]-camp_corner[0])**2 + (start[1]-camp_corner[1])**2):  # Moved away from camp corner
+        return True
     return False
 
 
@@ -118,19 +133,25 @@ def single(color, time, board):
     positions = get_positions(piece, board)
     best_val = float('-inf')
 
+    in_own_camp = has_piece_in_own_camp(positions, camp)
     for pos in positions:
-        valid_moves = get_valid_moves(pos, board)
         print('pos:', pos)
         print('valid_moves:')
-        first_possible = is_first_possible(valid_moves, camp)
-        for move in valid_moves:
-            move_seq = get_move_seq(move)
-            if move_seq[0] not in camp and move_seq[-1] in camp:  # Rule 1a of addendum
-                continue
-            if has_piece_in_own_camp(positions, camp):  # Rule 1b of addendum
-                if first_possible and (move_seq[0] not in camp or (move_seq[0] in camp and move_seq[-1] in camp)):
-                    continue
-            print(move_seq)
+        end_nodes = get_end_nodes(pos, board)  # List of end nodes for backtracking
+        move_seqs = get_move_seqs(end_nodes)  # List of move sequences
+
+        move_seqs = list(filter(lambda x: move_back_in_camp(x, camp), move_seqs))  # Rule 1a of addendum
+        if in_own_camp:  # Rule 1b of addendum
+            final_move_seqs = list(filter(lambda x: move_out_of_camp(x, camp), move_seqs))  # Alt. 1
+            if not final_move_seqs:  # Alt. 1 not possible
+                final_move_seqs = list(filter(lambda x: move_away_from_camp(x, camp_corner), move_seqs))  # Alt. 2
+                if not final_move_seqs:  # Alt. 2 not possible
+                    final_move_seqs = move_seqs
+        else:
+            final_move_seqs = move_seqs
+
+        for fms in final_move_seqs:
+            print(fms)
         print()
 
     return []
