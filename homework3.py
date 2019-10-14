@@ -6,10 +6,6 @@ class MoveNode(object):
         self.move = move  # Type of move ('E' for 'empty' or 'J' for 'jump')
         self.coord = coord  # Coordinate at end of move
         self.parent = parent  # Parent node (contains coordinate at start of move)
-        self.children = []  # List of children nodes
-
-    def add_child(self, child):
-        self.children.append(child)
 
 
 def get_positions(piece, board):
@@ -40,7 +36,7 @@ def is_in_board(pos):
     return False
 
 
-def add_jumps(start, board, visited):
+def add_jumps(start, board, visited, end_nodes):
     jumps = [(-2, -2), (-2, 0), (-2, 2), (0, -2), (0, 2), (2, -2), (2, 0), (2, 2)]  # Eight possible jumps
     pos = start.coord
     for j in jumps:
@@ -50,24 +46,36 @@ def add_jumps(start, board, visited):
         if board[pos[0]+int(j[0]/2)][pos[1]+int(j[1]/2)] != '.' and board[new_pos[0]][new_pos[1]] == '.' and \
                 new_pos not in visited:
             child = MoveNode('J', new_pos, start)  # Make a jump
-            start.add_child(child)
-            add_jumps(child, board, visited+[new_pos])
+            end_nodes.append(child)
+            add_jumps(child, board, visited+[new_pos], end_nodes)
 
 
 def get_valid_moves(pos, board):
     directions = [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)]  # Eight possible directions
     root = MoveNode(None, pos, None)  # All possible moves organized in a tree
+    end_nodes = []  # List of nodes containing ending coordinates of possible moves (used for backtracking)
     for d in directions:
         new_pos = pos[0] + d[0], pos[1] + d[1]
         if not is_in_board(new_pos):
             continue
         elif board[new_pos[0]][new_pos[1]] == '.':
-            root.add_child(MoveNode('E', new_pos, root))  # Move to adjacent empty location
+            child = MoveNode('E', new_pos, root)  # Move to adjacent empty location
+            end_nodes.append(child)
         elif is_in_board((new_pos[0]+d[0], new_pos[1]+d[1])) and board[new_pos[0]+d[0]][new_pos[1]+d[1]] == '.':
-            child = MoveNode('J', (new_pos[0]+d[0], new_pos[1]+d[1]), root)
+            child = MoveNode('J', (new_pos[0]+d[0], new_pos[1]+d[1]), root)  # Make a jump
+            end_nodes.append(child)
             visited = [pos, child.coord]  # List of visited coordinates for loop detection
-            add_jumps(child, board, visited)  # Find additional jumps
-            root.add_child(child)
+            add_jumps(child, board, visited, end_nodes)  # Find additional jumps
+    return end_nodes
+
+
+def get_move_seq(end_node):
+    move_seq = [end_node.coord]
+    node = end_node
+    while node.parent:
+        move_seq = [node.parent.coord] + move_seq
+        node = node.parent
+    return move_seq
 
 
 def single(color, time, board):
@@ -78,6 +86,12 @@ def single(color, time, board):
 
     for pos in positions:
         valid_moves = get_valid_moves(pos, board)
+        print('pos:', pos)
+        print('valid_moves:')
+        for move in valid_moves:
+            move_seq = get_move_seq(move)
+            print(move_seq)
+        print()
 
     return []
 
