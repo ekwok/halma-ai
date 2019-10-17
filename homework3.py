@@ -172,7 +172,7 @@ def get_final_move_seqs(piece, board, camp, camp_corner):
     return final_move_seqs
 
 
-def minimax(board, is_max, piece):
+def minimax(board, is_max, piece, alpha, beta):
     score = eval_func(piece, board)
 
     if won_game(piece, board):
@@ -196,11 +196,16 @@ def minimax(board, is_max, piece):
             board[fms[-1][0]][fms[-1][1]] = piece
 
             # Compute evaluation function for this move
-            max_score = max(minimax(board, not is_max, opp_piece), max_score)
+            max_score = max(max_score, minimax(board, not is_max, opp_piece, alpha, beta))
 
             # Undo the move
             board[fms[0][0]][fms[0][1]] = piece
             board[fms[-1][0]][fms[-1][1]] = '.'
+
+            if max_score >= beta:
+                return max_score
+            alpha = max(alpha, max_score)
+
         return max_score
     else:
         min_score = float('inf')
@@ -211,11 +216,16 @@ def minimax(board, is_max, piece):
             board[fms[-1][0]][fms[-1][1]] = piece
 
             # Compute evaluation function for this move
-            min_score = min(minimax(board, not is_max, opp_piece), min_score)
+            min_score = min(min_score, minimax(board, not is_max, opp_piece, alpha, beta))
 
             # Undo the move
             board[fms[0][0]][fms[0][1]] = piece
             board[fms[-1][0]][fms[-1][1]] = '.'
+
+            if min_score <= alpha:
+                return min_score
+            beta = min(beta, min_score)
+
         return min_score
 
 
@@ -241,7 +251,7 @@ def single(color, time_rem, board, start):
         board[fms[-1][0]][fms[-1][1]] = piece
 
         # Compute evaluation function for this move
-        val = minimax(board, False, opp_piece)
+        val = minimax(board, False, opp_piece, float('-inf'), float('inf'))
 
         # Undo the move
         board[fms[0][0]][fms[0][1]] = piece
