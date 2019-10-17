@@ -1,4 +1,21 @@
 import math
+import time
+
+WHITE_CAMP = [
+    (11, 14), (11, 15),
+    (12, 13), (12, 14), (12, 15),
+    (13, 12), (13, 13), (13, 14), (13, 15),
+    (14, 11), (14, 12), (14, 13), (14, 14), (14, 15),
+    (15, 11), (15, 12), (15, 13), (15, 14), (15, 15)
+]
+
+BLACK_CAMP = [
+    (0, 0), (0, 1), (0, 2), (0, 3), (0, 4),
+    (1, 0), (1, 1), (1, 2), (1, 3), (1, 4),
+    (2, 0), (2, 1), (2, 2), (2, 3),
+    (3, 0), (3, 1), (3, 2),
+    (4, 0), (4, 1)
+]
 
 
 class MoveNode(object):
@@ -17,15 +34,17 @@ def get_positions(piece, board):
     return res
 
 
-def eval_func(piece, positions):
+def eval_func(piece, board):
     if piece == 'W':
         corner = 0, 0
     else:
         corner = 15, 15
 
     res = 0
-    for pos in positions:
-        res -= math.sqrt((pos[0]-corner[0])**2 + (pos[1]-corner[1])**2)  # Euclidean distance from pos to corner
+    for i in range(16):
+        for j in range(16):
+            if board[i][j] == piece:
+                res -= math.sqrt((i-corner[0])**2 + (j-corner[1])**2)  # Euclidean distance from piece to corner
 
     return res  # Negated sum of distances from all pieces to opponent's corner
 
@@ -108,26 +127,46 @@ def move_away_from_corner(move_seq, camp, camp_corner):
     return False
 
 
-def single(color, time, board):
+def initial_config(opp_piece, opp_camp, board):
+    for coord in opp_camp:
+        if board[coord[0]][coord[1]] != opp_piece:
+            return False
+    return True
+
+
+def won_game(piece, board):
+    if piece == 'W':
+        opp_piece = 'B'
+        opp_camp = BLACK_CAMP
+    else:
+        opp_piece = 'W'
+        opp_camp = WHITE_CAMP
+
+    if initial_config(opp_piece, opp_camp, board):
+        return False
+
+    for coord in opp_camp:
+        if board[coord[0]][coord[1]] == '.':
+            return False
+
+    return True
+
+
+def minimax(board, depth, is_max, piece):
+    score = eval_func(piece, board)
+
+    if won_game(piece, board):
+        return score
+
+
+def single(color, time_rem, board, start):
     piece = color[0]  # 'W' for WHITE and 'B' for BLACK
 
     if piece == 'W':
-        camp = [
-            (11, 14), (11, 15),
-            (12, 13), (12, 14), (12, 15),
-            (13, 12), (13, 13), (13, 14), (13, 15),
-            (14, 11), (14, 12), (14, 13), (14, 14), (14, 15),
-            (15, 11), (15, 12), (15, 13), (15, 14), (15, 15)
-        ]
+        camp = WHITE_CAMP
         camp_corner = 15, 15
     else:
-        camp = [
-            (0, 0), (0, 1), (0, 2), (0, 3), (0, 4),
-            (1, 0), (1, 1), (1, 2), (1, 3), (1, 4),
-            (2, 0), (2, 1), (2, 2), (2, 3),
-            (3, 0), (3, 1), (3, 2),
-            (4, 0), (4, 1)
-        ]
+        camp = BLACK_CAMP
         camp_corner = 0, 0
 
     positions = get_positions(piece, board)
@@ -147,30 +186,44 @@ def single(color, time, board):
         final_move_seqs = move_seqs
 
     best_val = float('-inf')
+    best_move_seq = []
     for fms in final_move_seqs:
-        print(fms)
-    print()
+        # Make the move
+        board[fms[0][0]][fms[0][1]] = '.'
+        board[fms[-1][0]][fms[-1][1]] = piece
 
-    return []
+        # Compute evaluation function for this move
+        val = minimax(board, 0, False, piece)
+
+        # Undo the move
+        board[fms[0][0]][fms[0][1]] = piece
+        board[fms[-1][0]][fms[-1][1]] = '.'
+
+        if val > best_val:
+            best_val = val
+            best_move_seq = fms
+
+    return best_move_seq
 
 
-def game(color, time, board):
+def game(color, time_rem, board, start):
     return []
 
 
 def main():
+    start = time.time()
     with open('input4.txt') as infile:
         mode = infile.readline().strip()
         color = infile.readline().strip()
-        time = float(infile.readline().strip())
+        time_rem = float(infile.readline().strip())
         board = []
         for i in range(16):
             board.append(list(infile.readline().strip()))
 
     if mode == 'SINGLE':
-        results = single(color, time, board)
+        results = single(color, time_rem, board, start)
     else:
-        results = game(color, time, board)
+        results = game(color, time_rem, board, start)
 
     # print('mode:', mode)
     # print('color:', color)
