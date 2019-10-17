@@ -152,23 +152,7 @@ def won_game(piece, board):
     return True
 
 
-def minimax(board, depth, is_max, piece):
-    score = eval_func(piece, board)
-
-    if won_game(piece, board):
-        return score
-
-
-def single(color, time_rem, board, start):
-    piece = color[0]  # 'W' for WHITE and 'B' for BLACK
-
-    if piece == 'W':
-        camp = WHITE_CAMP
-        camp_corner = 15, 15
-    else:
-        camp = BLACK_CAMP
-        camp_corner = 0, 0
-
+def get_final_move_seqs(piece, board, camp, camp_corner):
     positions = get_positions(piece, board)
     move_seqs = []  # List of possible move sequences
     for pos in positions:
@@ -185,6 +169,70 @@ def single(color, time_rem, board, start):
     else:
         final_move_seqs = move_seqs
 
+    return final_move_seqs
+
+
+def minimax(board, is_max, piece):
+    score = eval_func(piece, board)
+
+    if won_game(piece, board):
+        return score
+
+    if piece == 'W':
+        camp = WHITE_CAMP
+        camp_corner = 15, 15
+        opp_piece = 'B'
+    else:
+        camp = BLACK_CAMP
+        camp_corner = 0, 0
+        opp_piece = 'W'
+
+    if is_max:
+        max_score = float('-inf')
+        final_move_seqs = get_final_move_seqs(piece, board, camp, camp_corner)
+        for fms in final_move_seqs:
+            # Make the move
+            board[fms[0][0]][fms[0][1]] = '.'
+            board[fms[-1][0]][fms[-1][1]] = piece
+
+            # Compute evaluation function for this move
+            max_score = max(minimax(board, not is_max, opp_piece), max_score)
+
+            # Undo the move
+            board[fms[0][0]][fms[0][1]] = piece
+            board[fms[-1][0]][fms[-1][1]] = '.'
+        return max_score
+    else:
+        min_score = float('inf')
+        final_move_seqs = get_final_move_seqs(piece, board, camp, camp_corner)
+        for fms in final_move_seqs:
+            # Make the move
+            board[fms[0][0]][fms[0][1]] = '.'
+            board[fms[-1][0]][fms[-1][1]] = piece
+
+            # Compute evaluation function for this move
+            min_score = min(minimax(board, not is_max, opp_piece), min_score)
+
+            # Undo the move
+            board[fms[0][0]][fms[0][1]] = piece
+            board[fms[-1][0]][fms[-1][1]] = '.'
+        return min_score
+
+
+def single(color, time_rem, board, start):
+    piece = color[0]  # 'W' for WHITE and 'B' for BLACK
+
+    if piece == 'W':
+        camp = WHITE_CAMP
+        camp_corner = 15, 15
+        opp_piece = 'B'
+    else:
+        camp = BLACK_CAMP
+        camp_corner = 0, 0
+        opp_piece = 'W'
+
+    final_move_seqs = get_final_move_seqs(piece, board, camp, camp_corner)
+
     best_val = float('-inf')
     best_move_seq = []
     for fms in final_move_seqs:
@@ -193,7 +241,7 @@ def single(color, time_rem, board, start):
         board[fms[-1][0]][fms[-1][1]] = piece
 
         # Compute evaluation function for this move
-        val = minimax(board, 0, False, piece)
+        val = minimax(board, False, opp_piece)
 
         # Undo the move
         board[fms[0][0]][fms[0][1]] = piece
@@ -212,7 +260,7 @@ def game(color, time_rem, board, start):
 
 def main():
     start = time.time()
-    with open('input4.txt') as infile:
+    with open('input.txt') as infile:
         mode = infile.readline().strip()
         color = infile.readline().strip()
         time_rem = float(infile.readline().strip())
@@ -224,6 +272,8 @@ def main():
         results = single(color, time_rem, board, start)
     else:
         results = game(color, time_rem, board, start)
+
+    print(results)
 
     # print('mode:', mode)
     # print('color:', color)
