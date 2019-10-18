@@ -100,8 +100,8 @@ def get_move_seqs(end_nodes):
     return res
 
 
-def move_back_in_camp(move_seq, camp):
-    if move_seq[0] not in camp and move_seq[-1] in camp:
+def not_move_back_in_camp(move_seq, camp):
+    if move_seq[0][1] not in camp and move_seq[-1][1] in camp:
         return False
     return True
 
@@ -114,13 +114,13 @@ def has_piece_in_own_camp(positions, camp):
 
 
 def move_out_of_camp(move_seq, camp):
-    if move_seq[0] in camp and move_seq[-1] not in camp:
+    if move_seq[0][1] in camp and move_seq[-1][1] not in camp:
         return True
     return False
 
 
 def move_away_from_corner(move_seq, camp, camp_corner):
-    start, end = move_seq[0], move_seq[-1]
+    start, end = move_seq[0][1], move_seq[-1][1]
     if start in camp and math.sqrt((end[0]-camp_corner[0])**2 + (end[1]-camp_corner[1])**2) > \
             math.sqrt((start[0]-camp_corner[0])**2 + (start[1]-camp_corner[1])**2):
         return True
@@ -152,6 +152,17 @@ def won_game(piece, board):
     return True
 
 
+def not_leave_opp_camp(move_seq, piece):
+    if piece == 'W':
+        opp_camp = BLACK_CAMP
+    else:
+        opp_camp = WHITE_CAMP
+
+    if move_seq[0][1] in opp_camp and move_seq[-1][1] not in opp_camp:
+        return False
+    return True
+
+
 def get_final_move_seqs(piece, board, camp, camp_corner):
     positions = get_positions(piece, board)
     move_seqs = []  # List of possible move sequences
@@ -159,11 +170,12 @@ def get_final_move_seqs(piece, board, camp, camp_corner):
         end_nodes = get_end_nodes(pos, board)  # List of end nodes for backtracking
         move_seqs.extend(get_move_seqs(end_nodes))
 
-    move_seqs = list(filter(lambda x: move_back_in_camp(x[1], camp), move_seqs))  # Rule 1a of addendum
+    move_seqs = list(filter(lambda x: not_leave_opp_camp(x, piece), move_seqs))  # Cannot leave opposing camp
+    move_seqs = list(filter(lambda x: not_move_back_in_camp(x, camp), move_seqs))  # Rule 1a of addendum
     if has_piece_in_own_camp(positions, camp):  # Rule 1b of addendum
-        final_move_seqs = list(filter(lambda x: move_out_of_camp(x[1], camp), move_seqs))  # Alt 1
+        final_move_seqs = list(filter(lambda x: move_out_of_camp(x, camp), move_seqs))  # Alt 1
         if not final_move_seqs:  # Alt 1 not possible
-            final_move_seqs = list(filter(lambda x: move_away_from_corner(x[1], camp, camp_corner), move_seqs))  # Alt 2
+            final_move_seqs = list(filter(lambda x: move_away_from_corner(x, camp, camp_corner), move_seqs))  # Alt 2
             if not final_move_seqs:  # Alt 2 not possible
                 final_move_seqs = move_seqs
     else:
@@ -175,9 +187,6 @@ def get_final_move_seqs(piece, board, camp, camp_corner):
 def minimax(depth, board, is_max, piece, alpha, beta):
     score = eval_func(piece, board)
 
-    if depth == 4 or won_game(piece, board):
-        return score
-
     if piece == 'W':
         camp = WHITE_CAMP
         camp_corner = 15, 15
@@ -186,6 +195,9 @@ def minimax(depth, board, is_max, piece, alpha, beta):
         camp = BLACK_CAMP
         camp_corner = 0, 0
         opp_piece = 'W'
+
+    if depth == 4 or won_game(piece, board):
+        return score
 
     if is_max:
         max_score = float('-inf')
@@ -196,13 +208,13 @@ def minimax(depth, board, is_max, piece, alpha, beta):
 
             # Make the move
             board[start[0]][start[1]] = '.'
-            board[end[0]][end[1]] = piece
+            board[end[0]][end[1]] = opp_piece
 
             # Compute evaluation function for this move
             max_score = max(max_score, minimax(depth+1, board, not is_max, opp_piece, alpha, beta))
 
             # Undo the move
-            board[start[0]][start[1]] = piece
+            board[start[0]][start[1]] = opp_piece
             board[end[0]][end[1]] = '.'
 
             if max_score >= beta:
@@ -219,13 +231,13 @@ def minimax(depth, board, is_max, piece, alpha, beta):
 
             # Make the move
             board[start[0]][start[1]] = '.'
-            board[end[0]][end[1]] = piece
+            board[end[0]][end[1]] = opp_piece
 
             # Compute evaluation function for this move
             min_score = min(min_score, minimax(depth+1, board, not is_max, opp_piece, alpha, beta))
 
             # Undo the move
-            board[start[0]][start[1]] = piece
+            board[start[0]][start[1]] = opp_piece
             board[end[0]][end[1]] = '.'
 
             if min_score <= alpha:
@@ -260,11 +272,11 @@ def single(color, time_rem, board, start_time):
         board[end[0]][end[1]] = piece
 
         # Compute evaluation function for this move
-        val = minimax(1, board, False, opp_piece, float('-inf'), float('inf'))
+        val = minimax(0, board, False, piece, float('-inf'), float('inf'))
 
-        # print('fms:', fms)
-        # print('val:', val)
-        # print()
+        print('fms:', fms)
+        print('val:', val)
+        print()
 
         # Undo the move
         board[start[0]][start[1]] = piece
@@ -274,6 +286,7 @@ def single(color, time_rem, board, start_time):
             best_val = val
             best_move_seq = fms
 
+    print('best_move_seq:', best_move_seq)
     return best_move_seq
 
 
@@ -283,7 +296,7 @@ def game(color, time_rem, board, start_time):
 
 def main():
     start_time = time.time()
-    with open('input3.txt') as infile:
+    with open('input.txt') as infile:
         mode = infile.readline().strip()
         color = infile.readline().strip()
         time_rem = float(infile.readline().strip())
@@ -296,7 +309,7 @@ def main():
     else:
         results = game(color, time_rem, board, start_time)
 
-    with open('output3.txt', 'w') as outfile:
+    with open('output.txt', 'w') as outfile:
         start = results[0][1]
         for i in range(1, len(results)):
             move = results[i][0]
