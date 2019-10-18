@@ -91,10 +91,10 @@ def get_end_nodes(pos, board):
 def get_move_seqs(end_nodes):
     res = []
     for en in end_nodes:
-        move_seq = [en.coord]
-        node = en
-        while node.parent:
-            move_seq = [node.parent.coord] + move_seq
+        move_seq = [(en.move, en.coord)]
+        node = en.parent
+        while node:
+            move_seq = [(node.move, node.coord)] + move_seq
             node = node.parent
         res.append(move_seq)
     return res
@@ -159,12 +159,12 @@ def get_final_move_seqs(piece, board, camp, camp_corner):
         end_nodes = get_end_nodes(pos, board)  # List of end nodes for backtracking
         move_seqs.extend(get_move_seqs(end_nodes))
 
-    move_seqs = list(filter(lambda x: move_back_in_camp(x, camp), move_seqs))  # Rule 1a of addendum
+    move_seqs = list(filter(lambda x: move_back_in_camp(x[1], camp), move_seqs))  # Rule 1a of addendum
     if has_piece_in_own_camp(positions, camp):  # Rule 1b of addendum
-        final_move_seqs = list(filter(lambda x: move_out_of_camp(x, camp), move_seqs))  # Alt. 1
-        if not final_move_seqs:  # Alt. 1 not possible
-            final_move_seqs = list(filter(lambda x: move_away_from_corner(x, camp, camp_corner), move_seqs))  # Alt. 2
-            if not final_move_seqs:  # Alt. 2 not possible
+        final_move_seqs = list(filter(lambda x: move_out_of_camp(x[1], camp), move_seqs))  # Alt 1
+        if not final_move_seqs:  # Alt 1 not possible
+            final_move_seqs = list(filter(lambda x: move_away_from_corner(x[1], camp, camp_corner), move_seqs))  # Alt 2
+            if not final_move_seqs:  # Alt 2 not possible
                 final_move_seqs = move_seqs
     else:
         final_move_seqs = move_seqs
@@ -172,10 +172,10 @@ def get_final_move_seqs(piece, board, camp, camp_corner):
     return final_move_seqs
 
 
-def minimax(board, is_max, piece, alpha, beta):
+def minimax(depth, board, is_max, piece, alpha, beta):
     score = eval_func(piece, board)
 
-    if won_game(piece, board):
+    if depth == 4 or won_game(piece, board):
         return score
 
     if piece == 'W':
@@ -191,16 +191,19 @@ def minimax(board, is_max, piece, alpha, beta):
         max_score = float('-inf')
         final_move_seqs = get_final_move_seqs(piece, board, camp, camp_corner)
         for fms in final_move_seqs:
+            start = fms[0][1]
+            end = fms[-1][1]
+
             # Make the move
-            board[fms[0][0]][fms[0][1]] = '.'
-            board[fms[-1][0]][fms[-1][1]] = piece
+            board[start[0]][start[1]] = '.'
+            board[end[0]][end[1]] = piece
 
             # Compute evaluation function for this move
-            max_score = max(max_score, minimax(board, not is_max, opp_piece, alpha, beta))
+            max_score = max(max_score, minimax(depth+1, board, not is_max, opp_piece, alpha, beta))
 
             # Undo the move
-            board[fms[0][0]][fms[0][1]] = piece
-            board[fms[-1][0]][fms[-1][1]] = '.'
+            board[start[0]][start[1]] = piece
+            board[end[0]][end[1]] = '.'
 
             if max_score >= beta:
                 return max_score
@@ -211,16 +214,19 @@ def minimax(board, is_max, piece, alpha, beta):
         min_score = float('inf')
         final_move_seqs = get_final_move_seqs(piece, board, camp, camp_corner)
         for fms in final_move_seqs:
+            start = fms[0][1]
+            end = fms[-1][1]
+
             # Make the move
-            board[fms[0][0]][fms[0][1]] = '.'
-            board[fms[-1][0]][fms[-1][1]] = piece
+            board[start[0]][start[1]] = '.'
+            board[end[0]][end[1]] = piece
 
             # Compute evaluation function for this move
-            min_score = min(min_score, minimax(board, not is_max, opp_piece, alpha, beta))
+            min_score = min(min_score, minimax(depth+1, board, not is_max, opp_piece, alpha, beta))
 
             # Undo the move
-            board[fms[0][0]][fms[0][1]] = piece
-            board[fms[-1][0]][fms[-1][1]] = '.'
+            board[start[0]][start[1]] = piece
+            board[end[0]][end[1]] = '.'
 
             if min_score <= alpha:
                 return min_score
@@ -229,7 +235,7 @@ def minimax(board, is_max, piece, alpha, beta):
         return min_score
 
 
-def single(color, time_rem, board, start):
+def single(color, time_rem, board, start_time):
     piece = color[0]  # 'W' for WHITE and 'B' for BLACK
 
     if piece == 'W':
@@ -246,16 +252,23 @@ def single(color, time_rem, board, start):
     best_val = float('-inf')
     best_move_seq = []
     for fms in final_move_seqs:
+        start = fms[0][1]
+        end = fms[-1][1]
+
         # Make the move
-        board[fms[0][0]][fms[0][1]] = '.'
-        board[fms[-1][0]][fms[-1][1]] = piece
+        board[start[0]][start[1]] = '.'
+        board[end[0]][end[1]] = piece
 
         # Compute evaluation function for this move
-        val = minimax(board, False, opp_piece, float('-inf'), float('inf'))
+        val = minimax(1, board, False, opp_piece, float('-inf'), float('inf'))
+
+        # print('fms:', fms)
+        # print('val:', val)
+        # print()
 
         # Undo the move
-        board[fms[0][0]][fms[0][1]] = piece
-        board[fms[-1][0]][fms[-1][1]] = '.'
+        board[start[0]][start[1]] = piece
+        board[end[0]][end[1]] = '.'
 
         if val > best_val:
             best_val = val
@@ -264,13 +277,13 @@ def single(color, time_rem, board, start):
     return best_move_seq
 
 
-def game(color, time_rem, board, start):
+def game(color, time_rem, board, start_time):
     return []
 
 
 def main():
-    start = time.time()
-    with open('input.txt') as infile:
+    start_time = time.time()
+    with open('input3.txt') as infile:
         mode = infile.readline().strip()
         color = infile.readline().strip()
         time_rem = float(infile.readline().strip())
@@ -279,11 +292,19 @@ def main():
             board.append(list(infile.readline().strip()))
 
     if mode == 'SINGLE':
-        results = single(color, time_rem, board, start)
+        results = single(color, time_rem, board, start_time)
     else:
-        results = game(color, time_rem, board, start)
+        results = game(color, time_rem, board, start_time)
 
-    print(results)
+    with open('output3.txt', 'w') as outfile:
+        start = results[0][1]
+        for i in range(1, len(results)):
+            move = results[i][0]
+            end = results[i][1]
+            outfile.write(move + ' ' + str(start[1]) + ',' + str(start[0]) + ' ' + str(end[1]) + ',' + str(end[0]))
+            if i < len(results) - 1:
+                outfile.write('\n')
+            start = end
 
     # print('mode:', mode)
     # print('color:', color)
