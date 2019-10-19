@@ -100,6 +100,17 @@ def get_move_seqs(end_nodes):
     return res
 
 
+def not_leave_opp_camp(move_seq, piece):
+    if piece == 'W':
+        opp_camp = BLACK_CAMP
+    else:
+        opp_camp = WHITE_CAMP
+
+    if move_seq[0][1] in opp_camp and move_seq[-1][1] not in opp_camp:
+        return False
+    return True
+
+
 def not_move_back_in_camp(move_seq, camp):
     if move_seq[0][1] not in camp and move_seq[-1][1] in camp:
         return False
@@ -152,17 +163,6 @@ def won_game(piece, board):
     return True
 
 
-def not_leave_opp_camp(move_seq, piece):
-    if piece == 'W':
-        opp_camp = BLACK_CAMP
-    else:
-        opp_camp = WHITE_CAMP
-
-    if move_seq[0][1] in opp_camp and move_seq[-1][1] not in opp_camp:
-        return False
-    return True
-
-
 def get_final_move_seqs(piece, board, camp, camp_corner):
     positions = get_positions(piece, board)
     move_seqs = []  # List of possible move sequences
@@ -173,10 +173,10 @@ def get_final_move_seqs(piece, board, camp, camp_corner):
     move_seqs = list(filter(lambda x: not_leave_opp_camp(x, piece), move_seqs))  # Cannot leave opposing camp
     move_seqs = list(filter(lambda x: not_move_back_in_camp(x, camp), move_seqs))  # Rule 1a of addendum
     if has_piece_in_own_camp(positions, camp):  # Rule 1b of addendum
-        final_move_seqs = list(filter(lambda x: move_out_of_camp(x, camp), move_seqs))  # Alt 1
-        if not final_move_seqs:  # Alt 1 not possible
-            final_move_seqs = list(filter(lambda x: move_away_from_corner(x, camp, camp_corner), move_seqs))  # Alt 2
-            if not final_move_seqs:  # Alt 2 not possible
+        final_move_seqs = list(filter(lambda x: move_out_of_camp(x, camp), move_seqs))  # Alt. 1
+        if not final_move_seqs:  # Alt. 1 not possible
+            final_move_seqs = list(filter(lambda x: move_away_from_corner(x, camp, camp_corner), move_seqs))  # Alt. 2
+            if not final_move_seqs:  # Alt. 2 not possible
                 final_move_seqs = move_seqs
     else:
         final_move_seqs = move_seqs
@@ -253,11 +253,9 @@ def single(color, time_rem, board, start_time):
     if piece == 'W':
         camp = WHITE_CAMP
         camp_corner = 15, 15
-        opp_piece = 'B'
     else:
         camp = BLACK_CAMP
         camp_corner = 0, 0
-        opp_piece = 'W'
 
     final_move_seqs = get_final_move_seqs(piece, board, camp, camp_corner)
 
@@ -318,12 +316,6 @@ def main():
             if i < len(results) - 1:
                 outfile.write('\n')
             start = end
-
-    # print('mode:', mode)
-    # print('color:', color)
-    # print('time:', time)
-    # for row in board:
-    #     print(row)
 
 
 if __name__ == '__main__':
