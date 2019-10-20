@@ -130,10 +130,13 @@ def move_out_of_camp(move_seq, camp):
     return False
 
 
-def move_away_from_corner(move_seq, camp, camp_corner):
+def move_away_from_corner_in_camp(move_seq, camp, piece):
     start, end = move_seq[0][1], move_seq[-1][1]
-    if start in camp and math.sqrt((end[0]-camp_corner[0])**2 + (end[1]-camp_corner[1])**2) > \
-            math.sqrt((start[0]-camp_corner[0])**2 + (start[1]-camp_corner[1])**2):
+    if start in camp:
+        if piece == 'B' and (end[0] <= start[0] or end[1] <= start[1]):  # Do not move closer to corner (0, 0)
+            return False
+        elif piece == 'W' and (end[0] >= start[0] or end[1] >= start[1]):  # Do not move closer to corner (15, 15)
+            return False
         return True
     return False
 
@@ -163,6 +166,26 @@ def won_game(piece, board):
     return True
 
 
+def not_in_camp(move_seq, camp, piece):
+    start, end = move_seq[0][1], move_seq[-1][1]
+    if start not in camp:
+        if piece == 'B' and (end[0] <= start[0] or end[1] <= start[1]):  # Do not move closer to corner (0, 0)
+            return False
+        elif piece == 'W' and (end[0] >= start[0] or end[1] >= start[1]):  # Do not move closer to corner (15, 15)
+            return False
+        return True
+    return False
+
+
+def move_away_from_corner(move_seq, piece):
+    start, end = move_seq[0][1], move_seq[-1][1]
+    if piece == 'B' and (end[0] <= start[0] or end[1] <= start[1]):  # Do not move closer to corner (0, 0)
+        return False
+    elif piece == 'W' and (end[0] >= start[0] or end[1] >= start[1]):  # Do not move closer to corner (15, 15)
+        return False
+    return True
+
+
 def get_final_move_seqs(piece, board, camp, camp_corner):
     positions = get_positions(piece, board)
     move_seqs = []  # List of possible move sequences
@@ -175,11 +198,11 @@ def get_final_move_seqs(piece, board, camp, camp_corner):
     if has_piece_in_own_camp(positions, camp):  # Rule 1b of addendum
         final_move_seqs = list(filter(lambda x: move_out_of_camp(x, camp), move_seqs))  # Alt. 1
         if not final_move_seqs:  # Alt. 1 not possible
-            final_move_seqs = list(filter(lambda x: move_away_from_corner(x, camp, camp_corner), move_seqs))  # Alt. 2
-            if not final_move_seqs:  # Alt. 2 not possible
-                final_move_seqs = move_seqs
+            final_move_seqs = list(filter(lambda x: move_away_from_corner_in_camp(x, camp, piece), move_seqs))  # Alt. 2
+            if not final_move_seqs:  # Alt. 2 not possible (so move piece outside of camp)
+                final_move_seqs = list(filter(lambda x: not_in_camp(x, camp, piece), move_seqs))
     else:
-        final_move_seqs = move_seqs
+        final_move_seqs = list(filter(lambda x: move_away_from_corner(x, piece), move_seqs))
 
     return final_move_seqs
 
@@ -247,7 +270,7 @@ def minimax(depth, board, is_max, piece, alpha, beta):
         return min_score
 
 
-def single(color, time_rem, board, start_time):
+def single(color, board, time_given, start_time):
     piece = color[0]  # 'W' for WHITE and 'B' for BLACK
 
     if piece == 'W':
@@ -272,23 +295,23 @@ def single(color, time_rem, board, start_time):
         # Compute evaluation function for this move
         val = minimax(0, board, False, piece, float('-inf'), float('inf'))
 
-        print('fms:', fms)
-        print('val:', val)
-        print()
+        # print('fms:', fms)
+        # print('val:', val)
+        # print()
 
         # Undo the move
         board[start[0]][start[1]] = piece
         board[end[0]][end[1]] = '.'
 
-        if val > best_val:
+        if best_val < val < 0:
             best_val = val
             best_move_seq = fms
 
-    print('best_move_seq:', best_move_seq)
+    # print('best_move_seq:', best_move_seq)
     return best_move_seq
 
 
-def game(color, time_rem, board, start_time):
+def game(color, board, time_given, start_time):
     return []
 
 
@@ -297,15 +320,17 @@ def main():
     with open('input.txt') as infile:
         mode = infile.readline().strip()
         color = infile.readline().strip()
-        time_rem = float(infile.readline().strip())
+        time_given = float(infile.readline().strip())
         board = []
         for i in range(16):
             board.append(list(infile.readline().strip()))
 
-    if mode == 'SINGLE':
-        results = single(color, time_rem, board, start_time)
-    else:
-        results = game(color, time_rem, board, start_time)
+    # if mode == 'SINGLE':
+    #     results = single(color, board, time_given, start_time)
+    # else:
+    #     results = game(color, board, time_given, start_time)
+
+    results = single(color, board, time_given, start_time)
 
     with open('output.txt', 'w') as outfile:
         start = results[0][1]
@@ -316,6 +341,8 @@ def main():
             if i < len(results) - 1:
                 outfile.write('\n')
             start = end
+
+    # print('Time taken:', time.time() - start_time)
 
 
 if __name__ == '__main__':
