@@ -36,15 +36,19 @@ def get_positions(piece, board):
 
 def eval_func(piece, board):
     if piece == 'W':
+        opp_camp = BLACK_CAMP
         corner = 0, 0
     else:
+        opp_camp = WHITE_CAMP
         corner = 15, 15
 
     res = 0
     for i in range(16):
         for j in range(16):
             if board[i][j] == piece:
-                res -= math.sqrt((i-corner[0])**2 + (j-corner[1])**2)  # Euclidean distance from piece to corner
+                res -= math.sqrt((i-corner[0])**2 + (j-corner[1])**2)  # Euclidean distance
+                if (i, j) in opp_camp:
+                    res += 10  # Give credit to pieces that made it to opponent's camp
 
     return res  # Negated sum of distances from all pieces to opponent's corner
 
@@ -204,6 +208,9 @@ def get_final_move_seqs(piece, board, camp, camp_corner):
     else:
         final_move_seqs = list(filter(lambda x: move_away_from_corner(x, piece), move_seqs))
 
+    if not final_move_seqs:
+        return move_seqs
+
     return final_move_seqs
 
 
@@ -219,12 +226,12 @@ def minimax(depth, board, is_max, piece, alpha, beta):
         camp_corner = 0, 0
         opp_piece = 'W'
 
-    if depth == 4 or won_game(piece, board):
+    if depth == 0 or won_game(piece, board):
         return score
 
     if is_max:
         max_score = float('-inf')
-        final_move_seqs = get_final_move_seqs(piece, board, camp, camp_corner)
+        final_move_seqs = get_final_move_seqs(opp_piece, board, camp, camp_corner)
         for fms in final_move_seqs:
             start = fms[0][1]
             end = fms[-1][1]
@@ -234,7 +241,7 @@ def minimax(depth, board, is_max, piece, alpha, beta):
             board[end[0]][end[1]] = opp_piece
 
             # Compute evaluation function for this move
-            max_score = max(max_score, minimax(depth+1, board, not is_max, opp_piece, alpha, beta))
+            max_score = max(max_score, minimax(depth+1, board, False, opp_piece, alpha, beta))
 
             # Undo the move
             board[start[0]][start[1]] = opp_piece
@@ -247,7 +254,7 @@ def minimax(depth, board, is_max, piece, alpha, beta):
         return max_score
     else:
         min_score = float('inf')
-        final_move_seqs = get_final_move_seqs(piece, board, camp, camp_corner)
+        final_move_seqs = get_final_move_seqs(opp_piece, board, camp, camp_corner)
         for fms in final_move_seqs:
             start = fms[0][1]
             end = fms[-1][1]
@@ -257,7 +264,7 @@ def minimax(depth, board, is_max, piece, alpha, beta):
             board[end[0]][end[1]] = opp_piece
 
             # Compute evaluation function for this move
-            min_score = min(min_score, minimax(depth+1, board, not is_max, opp_piece, alpha, beta))
+            min_score = min(min_score, minimax(depth+1, board, True, opp_piece, alpha, beta))
 
             # Undo the move
             board[start[0]][start[1]] = opp_piece
@@ -315,6 +322,12 @@ def game(color, board, time_given, start_time):
     return []
 
 
+def output_board(board):
+    for row in board:
+        print(row)
+    print()
+
+
 def main():
     start_time = time.time()
     with open('input.txt') as infile:
@@ -330,17 +343,38 @@ def main():
     # else:
     #     results = game(color, board, time_given, start_time)
 
-    results = single(color, board, time_given, start_time)
+    piece = 'W'
+    white_counter, black_counter = 1, 1
+    while not won_game('W', board) and not won_game('B', board):
+        results = single(piece, board, time_given, start_time)
+        if results:
+            start, end = results[0][1], results[-1][1]
+            board[start[0]][start[1]] = '.'
+            board[end[0]][end[1]] = piece
+        if piece == 'W':
+            print('W ' + str(white_counter))
+            white_counter += 1
+            piece = 'B'
+        else:
+            print('B ' + str(black_counter))
+            black_counter += 1
+            piece = 'W'
+        output_board(board)
 
-    with open('output.txt', 'w') as outfile:
-        start = results[0][1]
-        for i in range(1, len(results)):
-            move = results[i][0]
-            end = results[i][1]
-            outfile.write(move + ' ' + str(start[1]) + ',' + str(start[0]) + ' ' + str(end[1]) + ',' + str(end[0]))
-            if i < len(results) - 1:
-                outfile.write('\n')
-            start = end
+    if won_game('W', board):
+        print('White won!')
+    else:
+        print('Black won!')
+
+    # with open('output.txt', 'w') as outfile:
+    #     start = results[0][1]
+    #     for i in range(1, len(results)):
+    #         move = results[i][0]
+    #         end = results[i][1]
+    #         outfile.write(move + ' ' + str(start[1]) + ',' + str(start[0]) + ' ' + str(end[1]) + ',' + str(end[0]))
+    #         if i < len(results) - 1:
+    #             outfile.write('\n')
+    #         start = end
 
     # print('Time taken:', time.time() - start_time)
 
