@@ -196,7 +196,7 @@ def minimax(nodes, depth, board, is_max, piece, alpha, beta):
         camp_corner = 0, 0
         opp_piece = 'W'
 
-    if depth == 4 or won_game(piece, board):
+    if depth == 0 or won_game(piece, board):
         return nodes, score
 
     if is_max:
@@ -282,9 +282,9 @@ def single(color, time_rem, board, start_time):
         total_nodes += res[0]
         val = res[1]
 
-        print('fms:', fms)
-        print('val:', val)
-        print()
+        # print('fms:', fms)
+        # print('val:', val)
+        # print()
 
         # Undo the move
         board[start[0]][start[1]] = piece
@@ -295,12 +295,13 @@ def single(color, time_rem, board, start_time):
             best_move_seq = fms
 
     print('best_move_seq:', best_move_seq)
+    # print()
     return total_nodes
 
 
 def main():
     start_time = time.time()
-    with open('input.txt') as infile:
+    with open('vocareum_inputs/input3.txt') as infile:
         mode = infile.readline().strip()
         color = infile.readline().strip()
         time_rem = float(infile.readline().strip())
@@ -309,11 +310,17 @@ def main():
             board.append(list(infile.readline().strip()))
 
     total_nodes = single(color, time_rem, board, start_time)
+    total_time = time.time() - start_time
+    nodes_per_sec = total_nodes / total_time
 
-    with open('calibration.txt', 'w') as outfile:
-        outfile.write(str(total_nodes))
+    # print('Number of nodes:', total_nodes)
+    # print('Time taken:', total_time)
+    # print('Nodes per second:', nodes_per_sec)
 
-    print('Time taken:', time.time() - start_time)
+    with open('calibration3_d0.txt', 'w') as outfile:
+        outfile.write('Number of nodes: ' + str(total_nodes) + '\n')
+        outfile.write('Time taken: ' + str(total_time) + '\n')
+        outfile.write('Nodes per second: ' + str(nodes_per_sec) + '\n')
 
 
 if __name__ == '__main__':
