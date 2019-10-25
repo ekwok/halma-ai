@@ -299,7 +299,7 @@ def print_board(board):
 
 
 def main():
-    with open('vocareum_inputs/input6.txt') as infile:
+    with open('input.txt') as infile:
         mode = infile.readline().strip()
         color = infile.readline().strip()
         time_given = float(infile.readline().strip())
@@ -307,65 +307,127 @@ def main():
         for i in range(16):
             board.append(list(infile.readline().strip()))
 
-    if mode == 'SINGLE':
-        if float(time_given) >= 3.0:
-            max_depth = 3
-        elif float(time_given) >= 0.05:
-            max_depth = 2
-        else:
-            max_depth = 1
-    else:
-        max_depth = 1
-
-    score, results = minimax(0, board, True, color[0], float('-inf'), float('inf'), max_depth)
-
-    # min_time = float('inf')
-    # max_time = float('-inf')
+    # if mode == 'SINGLE':
+    #     single_move_time = float(time_given)
+    # else:
+    #     try:
+    #         with open('playdata.txt') as infile:
+    #             moves_so_far = int(infile.readline().strip())
+    #     except FileNotFoundError:
+    #         moves_so_far = 0
     #
-    # piece = 'W'
-    # white_counter, black_counter = 1, 1
-    # while True:
-    #     begin = time.time()
-    #     if won_game('W', board):
-    #         print('White won!')
-    #         break
-    #     if won_game('B', board):
-    #         print('Black won!')
-    #         break
-    #     score, results = minimax(0, board, True, piece, float('-inf'), float('inf'))
-    #     if results:
-    #         start, end = results[0][1], results[-1][1]
-    #         board[start[0]][start[1]] = '.'
-    #         board[end[0]][end[1]] = piece
-    #     if piece == 'W':
-    #         print('W ' + str(white_counter))
-    #         white_counter += 1
-    #         piece = 'B'
+    #     if moves_so_far < 150:
+    #         single_move_time = time_given / (150 - moves_so_far)  # Assume it takes no more than 150 moves to win game
     #     else:
-    #         print('B ' + str(black_counter))
-    #         black_counter += 1
-    #         piece = 'W'
-    #     print_board(board)
-    #     time_taken = time.time() - begin
-    #     print('Time taken: ' + str(time_taken))
-    #     print()
-    #     if time_taken < min_time:
-    #         min_time = time_taken
-    #     elif time_taken > max_time:
-    #         max_time = time_taken
+    #         single_move_time = -1
     #
-    # print('Min time: ' + str(min_time))
-    # print('Max time: ' + str(max_time))
+    #     # Update moves_so_far and write to playdata.txt
+    #     moves_so_far += 1
+    #     with open('playdata.txt', 'w') as outfile:
+    #         outfile.write(str(moves_so_far))
+    #
+    # if single_move_time < 0.05:
+    #     max_depth = 1
+    # elif single_move_time < 2:
+    #     max_depth = 2
+    # else:
+    #     max_depth = 3
 
-    with open('vocareum_outputs/output6.txt', 'w') as outfile:
-        start = results[0][1]
-        for i in range(1, len(results)):
-            move = results[i][0]
-            end = results[i][1]
-            outfile.write(move + ' ' + str(start[1]) + ',' + str(start[0]) + ' ' + str(end[1]) + ',' + str(end[0]))
-            if i < len(results) - 1:
-                outfile.write('\n')
-            start = end
+    # score, results = minimax(0, board, True, color[0], float('-inf'), float('inf'), max_depth)
+
+    min_time = float('inf')
+    max_time = float('-inf')
+
+    piece = 'W'
+    white_counter, black_counter = 1, 1
+    white_time, black_time = 300.0, 300.0
+    while white_time > 0 and black_time > 0:
+        try:
+            if piece == 'W':
+                with open('playdata_white.txt') as infile:
+                    moves_so_far = int(infile.readline().strip())
+            else:
+                with open('playdata_black.txt') as infile:
+                    moves_so_far = int(infile.readline().strip())
+        except FileNotFoundError:
+            moves_so_far = 0
+        print('Moves so far: ' + str(moves_so_far))
+
+        if moves_so_far < 150:
+            if piece == 'W':
+                single_move_time = white_time / (150 - moves_so_far)
+            else:
+                single_move_time = black_time / (150 - moves_so_far)
+        else:
+            single_move_time = -1
+
+        # Update moves_so_far and write to playdata.txt
+        moves_so_far += 1
+        if piece == 'W':
+            with open('playdata_white.txt', 'w') as outfile:
+                outfile.write(str(moves_so_far))
+        else:
+            with open('playdata_black.txt', 'w') as outfile:
+                outfile.write(str(moves_so_far))
+
+        if single_move_time < 0.05:
+            max_depth = 1
+        else:
+            max_depth = 2
+
+        print('Max depth: ' + str(max_depth))
+
+        begin = time.time()
+        if won_game('W', board):
+            print('White won!')
+            break
+        if won_game('B', board):
+            print('Black won!')
+            break
+        score, results = minimax(0, board, True, piece, float('-inf'), float('inf'), max_depth)
+        if results:
+            start, end = results[0][1], results[-1][1]
+            board[start[0]][start[1]] = '.'
+            board[end[0]][end[1]] = piece
+        if piece == 'W':
+            print('W ' + str(white_counter))
+            white_counter += 1
+            piece = 'B'
+        else:
+            print('B ' + str(black_counter))
+            black_counter += 1
+            piece = 'W'
+        print_board(board)
+        time_taken = time.time() - begin
+        print('Time taken: ' + str(time_taken))
+        print()
+        if time_taken < min_time:
+            min_time = time_taken
+        elif time_taken > max_time:
+            max_time = time_taken
+
+        if piece == 'W':
+            white_time -= time_taken
+        else:
+            black_time -= time_taken
+
+    print('Min time: ' + str(min_time))
+    print('Max time: ' + str(max_time))
+
+    if white_time <= 0:
+        print('White lost!')
+    elif black_time <= 0:
+        print('Black lost!')
+
+    # with open('vocareum_outputs/output4.txt', 'w') as outfile:
+    #     start = results[0][1]
+    #     for i in range(1, len(results)):
+    #         move = results[i][0]
+    #         end = results[i][1]
+    #         outfile.write(move + ' ' + str(start[1]) + ',' + str(start[0]) + ' ' + str(end[1]) + ',' + str(end[0]))
+    #         if i < len(results) - 1:
+    #             outfile.write('\n')
+    #         start = end
 
 
 if __name__ == '__main__':
