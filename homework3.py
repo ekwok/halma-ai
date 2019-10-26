@@ -34,6 +34,7 @@ def get_positions(piece, board):
     return res
 
 
+# Calculates [(Negated sum of distances from all pieces to opponent's corner) + (Credit for reaching opponent's camp)]
 def eval_func(piece, board):
     if piece == 'W':
         opp_camp = BLACK_CAMP
@@ -50,7 +51,7 @@ def eval_func(piece, board):
                 if (i, j) in opp_camp:
                     res += 60  # Give credit to pieces that made it to opponent's camp
 
-    return res  # Negated sum of distances from all pieces to opponent's corner
+    return res
 
 
 def is_in_board(pos):
@@ -145,31 +146,6 @@ def move_away_from_corner_in_camp(move_seq, camp, piece):
     return False
 
 
-def initial_config(opp_piece, opp_camp, board):
-    for coord in opp_camp:
-        if board[coord[0]][coord[1]] != opp_piece:
-            return False
-    return True
-
-
-def won_game(piece, board):
-    if piece == 'W':
-        opp_piece = 'B'
-        opp_camp = BLACK_CAMP
-    else:
-        opp_piece = 'W'
-        opp_camp = WHITE_CAMP
-
-    if initial_config(opp_piece, opp_camp, board):
-        return False
-
-    for coord in opp_camp:
-        if board[coord[0]][coord[1]] == '.':
-            return False
-
-    return True
-
-
 def not_in_camp(move_seq, camp, piece):
     start, end = move_seq[0][1], move_seq[-1][1]
     if start not in camp:
@@ -214,6 +190,31 @@ def get_final_move_seqs(piece, board, camp):
     return final_move_seqs
 
 
+def initial_config(opp_piece, opp_camp, board):
+    for coord in opp_camp:
+        if board[coord[0]][coord[1]] != opp_piece:
+            return False
+    return True
+
+
+def won_game(piece, board):
+    if piece == 'W':
+        opp_piece = 'B'
+        opp_camp = BLACK_CAMP
+    else:
+        opp_piece = 'W'
+        opp_camp = WHITE_CAMP
+
+    if initial_config(opp_piece, opp_camp, board):
+        return False
+
+    for coord in opp_camp:
+        if board[coord[0]][coord[1]] == '.':
+            return False
+
+    return True
+
+
 def minimax(depth, board, is_max, piece, alpha, beta, max_depth):
     score = eval_func(piece, board)
 
@@ -241,10 +242,6 @@ def minimax(depth, board, is_max, piece, alpha, beta, max_depth):
 
             # Compute evaluation function for this move
             val, move_seq = minimax(depth+1, board, False, piece, alpha, beta, max_depth)
-
-            # print('fms:', fms)
-            # print('val:', val)
-            # print()
 
             # Undo the move
             board[start[0]][start[1]] = piece
@@ -274,10 +271,6 @@ def minimax(depth, board, is_max, piece, alpha, beta, max_depth):
             # Compute evaluation function for this move
             val, move_seq = minimax(depth+1, board, True, piece, alpha, beta, max_depth)
 
-            # print('fms:', fms)
-            # print('val:', val)
-            # print()
-
             # Undo the move
             board[start[0]][start[1]] = opp_piece
             board[end[0]][end[1]] = '.'
@@ -299,7 +292,7 @@ def print_board(board):
 
 
 def main():
-    with open('input.txt') as infile:
+    with open('vocareum_inputs/input6.txt') as infile:
         mode = infile.readline().strip()
         color = infile.readline().strip()
         time_given = float(infile.readline().strip())
@@ -317,9 +310,9 @@ def main():
     #         moves_so_far = 0
     #
     #     if moves_so_far < 150:
-    #         single_move_time = time_given / (150 - moves_so_far)  # Assume it takes no more than 150 moves to win game
+    #         single_move_time = time_given / (150 - moves_so_far)  # Ideally, it takes no more than 150 moves to win game
     #     else:
-    #         single_move_time = -1
+    #         single_move_time = -1  # 150th move and onward: return a result as fast as possible
     #
     #     # Update moves_so_far and write to playdata.txt
     #     moves_so_far += 1
@@ -328,17 +321,15 @@ def main():
     #
     # if single_move_time < 0.05:
     #     max_depth = 1
-    # elif single_move_time < 2:
-    #     max_depth = 2
     # else:
-    #     max_depth = 3
-
+    #     max_depth = 2
+    #
     # score, results = minimax(0, board, True, color[0], float('-inf'), float('inf'), max_depth)
 
     min_time = float('inf')
     max_time = float('-inf')
 
-    piece = 'W'
+    piece = 'B'
     white_counter, black_counter = 1, 1
     white_time, black_time = 300.0, 300.0
     while white_time > 0 and black_time > 0:
@@ -370,10 +361,12 @@ def main():
             with open('playdata_black.txt', 'w') as outfile:
                 outfile.write(str(moves_so_far))
 
-        if single_move_time < 0.05:
-            max_depth = 1
-        else:
-            max_depth = 2
+        # if single_move_time < 0.05:
+        #     max_depth = 1
+        # else:
+        #     max_depth = 2
+
+        max_depth = 1
 
         print('Max depth: ' + str(max_depth))
 
@@ -419,7 +412,7 @@ def main():
     elif black_time <= 0:
         print('Black lost!')
 
-    # with open('vocareum_outputs/output4.txt', 'w') as outfile:
+    # with open('output.txt', 'w') as outfile:
     #     start = results[0][1]
     #     for i in range(1, len(results)):
     #         move = results[i][0]
