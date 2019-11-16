@@ -1,5 +1,4 @@
 import math
-import time
 
 WHITE_CAMP = [
     (11, 14), (11, 15),
@@ -42,14 +41,12 @@ def get_empty_camp(opp_camp, board):
     return empty
 
 
-# Calculates [(Negated sum of distances from all pieces to opponent's corner) + (Credit for reaching opponent's camp)]
+# Calculates negated sum of distances from pieces not in opponent's camp to empty positions in opponent's camp
 def eval_func(piece, board):
     if piece == 'W':
         opp_camp = BLACK_CAMP
-        opp_corner = 0, 0
     else:
         opp_camp = WHITE_CAMP
-        opp_corner = 15, 15
 
     empty = get_empty_camp(opp_camp, board)  # List of empty positions in opponent's camp
 
@@ -57,13 +54,8 @@ def eval_func(piece, board):
     for i in range(16):
         for j in range(16):
             if board[i][j] == piece and (i, j) not in opp_camp:
-                res -= math.sqrt((i-opp_corner[0])**2 + (j-opp_corner[1])**2)  # Euclidean distance to opp_corner
                 for pos in empty:
-                    res -= math.sqrt((i-pos[0])**2 + (j-pos[1])**2)  # Euclidean dist. to empty positions in opp_camp
-                # if (i, j) in opp_camp:
-                #     res += 1  # Give credit to pieces that made it to opponent's camp
-                # else:
-                #     res -= 1  # Penalize pieces not in opponent's camp
+                    res -= math.sqrt((i-pos[0])**2 + (j-pos[1])**2)  # Euclidean distance to empty positions in opp_camp
 
     return res
 
@@ -300,22 +292,8 @@ def minimax(depth, board, is_max, piece, alpha, beta, max_depth):
         return min_score, best_move_seq
 
 
-def print_board(board):
-    for row in board:
-        print(row)
-
-
-def write_board(mode, color, time_left, board):
-    with open('board.txt', 'w') as outfile:
-        outfile.write(mode + '\n')
-        outfile.write(color + '\n')
-        outfile.write(str(time_left) + '\n')
-        for row in board:
-            outfile.write(''.join(row) + '\n')
-
-
 def main():
-    with open('vocareum_inputs/input6.txt') as infile:
+    with open('input.txt') as infile:
         mode = infile.readline().strip()
         color = infile.readline().strip()
         time_given = float(infile.readline().strip())
@@ -323,79 +301,17 @@ def main():
         for i in range(16):
             board.append(list(infile.readline().strip()))
 
-    # score, results = minimax(0, board, True, color[0], float('-inf'), float('inf'), 1)
+    score, results = minimax(0, board, True, color[0], float('-inf'), float('inf'), 1)
 
-    min_time = float('inf')
-    max_time = float('-inf')
-
-    piece = 'W'
-    white_counter, black_counter = 1, 1
-    white_moves_so_far, black_moves_so_far = 0, 0
-    white_time, black_time = 600.0, 600.0
-    while white_time > 0 and black_time > 0:
-        if piece == 'W':
-            write_board('GAME', 'WHITE', white_time, board)
-            print('Moves so far: ' + str(white_moves_so_far))
-            white_moves_so_far += 1
-        else:
-            write_board('GAME', 'BLACK', black_time, board)
-            print('Moves so far: ' + str(black_moves_so_far))
-            black_moves_so_far += 1
-
-        max_depth = 1
-        print('Max depth: ' + str(max_depth))
-
-        begin = time.time()
-        if won_game('W', board):
-            print('White won!')
-            break
-        if won_game('B', board):
-            print('Black won!')
-            break
-        score, results = minimax(0, board, True, piece, float('-inf'), float('inf'), max_depth)
-        if results:
-            start, end = results[0][1], results[-1][1]
-            board[start[0]][start[1]] = '.'
-            board[end[0]][end[1]] = piece
-        if piece == 'W':
-            print('W ' + str(white_counter))
-            white_counter += 1
-        else:
-            print('B ' + str(black_counter))
-            black_counter += 1
-        print_board(board)
-        time_taken = time.time() - begin
-        print('Time taken: ' + str(time_taken))
-        print()
-        if time_taken < min_time:
-            min_time = time_taken
-        elif time_taken > max_time:
-            max_time = time_taken
-
-        if piece == 'W':
-            white_time -= time_taken
-            piece = 'B'
-        else:
-            black_time -= time_taken
-            piece = 'W'
-
-    print('Min time: ' + str(min_time))
-    print('Max time: ' + str(max_time))
-
-    if white_time <= 0:
-        print('White lost!')
-    elif black_time <= 0:
-        print('Black lost!')
-
-    # with open('output.txt', 'w') as outfile:
-    #     start = results[0][1]
-    #     for i in range(1, len(results)):
-    #         move = results[i][0]
-    #         end = results[i][1]
-    #         outfile.write(move + ' ' + str(start[1]) + ',' + str(start[0]) + ' ' + str(end[1]) + ',' + str(end[0]))
-    #         if i < len(results) - 1:
-    #             outfile.write('\n')
-    #         start = end
+    with open('output.txt', 'w') as outfile:
+        start = results[0][1]
+        for i in range(1, len(results)):
+            move = results[i][0]
+            end = results[i][1]
+            outfile.write(move + ' ' + str(start[1]) + ',' + str(start[0]) + ' ' + str(end[1]) + ',' + str(end[0]))
+            if i < len(results) - 1:
+                outfile.write('\n')
+            start = end
 
 
 if __name__ == '__main__':
