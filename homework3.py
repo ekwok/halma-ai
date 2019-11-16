@@ -34,16 +34,12 @@ def get_positions(piece, board):
     return res
 
 
-def one_empty(opp_camp, board):
-    count = 0
-    empty_pos = None
+def get_empty_camp(opp_camp, board):
+    empty = []
     for pos in opp_camp:
         if board[pos[0]][pos[1]] == '.':
-            count += 1
-            if count > 1:
-                return None
-            empty_pos = pos
-    return empty_pos
+            empty.append(pos)
+    return empty
 
 
 # Calculates [(Negated sum of distances from all pieces to opponent's corner) + (Credit for reaching opponent's camp)]
@@ -55,24 +51,19 @@ def eval_func(piece, board):
         opp_camp = WHITE_CAMP
         opp_corner = 15, 15
 
-    empty = one_empty(opp_camp, board)
+    empty = get_empty_camp(opp_camp, board)  # List of empty positions in opponent's camp
 
     res = 0
     for i in range(16):
         for j in range(16):
-            if board[i][j] == piece:
-                res -= math.sqrt((i-opp_corner[0])**2 + (j-opp_corner[1])**2)  # Euclidean distance to opponent's corner
-                if (i, j) in opp_camp:
-                    res += 1  # Give credit to pieces that made it to opponent's camp
-                else:
-                    res -= 1  # Penalize pieces not in opponent's camp
-                    if empty:
-                        res -= math.sqrt((i-empty[0])**2 + (j-empty[1])**2)  # Euclidean dist. to single empty position
-
-                # elif piece == 'W' and (i, j) == (3, 3):
-                #     res -= 1
-                # elif piece == 'B' and (i, j) == (12, 12):
-                #     res -= 1
+            if board[i][j] == piece and (i, j) not in opp_camp:
+                res -= math.sqrt((i-opp_corner[0])**2 + (j-opp_corner[1])**2)  # Euclidean distance to opp_corner
+                for pos in empty:
+                    res -= math.sqrt((i-pos[0])**2 + (j-pos[1])**2)  # Euclidean dist. to empty positions in opp_camp
+                # if (i, j) in opp_camp:
+                #     res += 1  # Give credit to pieces that made it to opponent's camp
+                # else:
+                #     res -= 1  # Penalize pieces not in opponent's camp
 
     return res
 
@@ -339,47 +330,19 @@ def main():
 
     piece = 'W'
     white_counter, black_counter = 1, 1
+    white_moves_so_far, black_moves_so_far = 0, 0
     white_time, black_time = 600.0, 600.0
     while white_time > 0 and black_time > 0:
         if piece == 'W':
             write_board('GAME', 'WHITE', white_time, board)
+            print('Moves so far: ' + str(white_moves_so_far))
+            white_moves_so_far += 1
         else:
             write_board('GAME', 'BLACK', black_time, board)
+            print('Moves so far: ' + str(black_moves_so_far))
+            black_moves_so_far += 1
 
-        try:
-            if piece == 'W':
-                with open('playdata_white.txt') as infile:
-                    moves_so_far = int(infile.readline().strip())
-            else:
-                with open('playdata_black.txt') as infile:
-                    moves_so_far = int(infile.readline().strip())
-        except FileNotFoundError:
-            moves_so_far = 0
-        print('Moves so far: ' + str(moves_so_far))
-
-        if moves_so_far < 150:
-            if piece == 'W':
-                single_move_time = white_time / (150 - moves_so_far)
-            else:
-                single_move_time = black_time / (150 - moves_so_far)
-        else:
-            single_move_time = -1
-
-        # Update moves_so_far and write to playdata.txt
-        moves_so_far += 1
-        if piece == 'W':
-            with open('playdata_white.txt', 'w') as outfile:
-                outfile.write(str(moves_so_far))
-        else:
-            with open('playdata_black.txt', 'w') as outfile:
-                outfile.write(str(moves_so_far))
-
-        # if single_move_time < 0.05:
-        #     max_depth = 1
-        # else:
-        #     max_depth = 2
         max_depth = 1
-
         print('Max depth: ' + str(max_depth))
 
         begin = time.time()
